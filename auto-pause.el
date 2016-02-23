@@ -29,6 +29,7 @@
   proc)
 
 (defmacro with-auto-pause (delay-seconds &rest body)
+  (declare (debug t) (indent 1))
   `(let ((advise-name  "start-process-auto-pause-advise"))
      (advice-add start-process
                  :filter-return
