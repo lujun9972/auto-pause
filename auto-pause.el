@@ -38,11 +38,12 @@
 
 (defun auto-pause-mark-process (proc delay-seconds)
   "Pause the PROC the next time Emacs is idle for DELAY-SECONDS, and resume the PROC when emacs become busy again"
-  (auto-pause (lambda ()
-                (auto-pause-pause-process proc))
-              (lambda ()
-                (auto-pause-resume-process proc))
-              delay-seconds)
+  (let ((abort-function (auto-pause (lambda ()
+                                      (auto-pause-pause-process proc))
+                                    (lambda ()
+                                      (auto-pause-resume-process proc))
+                                    delay-seconds)))
+    (add-function :after (process-sentinel proc) abort-function)) 
   proc)
 
 (defmacro with-auto-pause (delay-seconds &rest body)
