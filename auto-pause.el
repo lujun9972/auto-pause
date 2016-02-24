@@ -68,3 +68,4 @@
 ;;                             (run-with-idle-timer delay-seconds nil pause-function)))
 ;;     (list pause-function resume-function)))
 
+(provide 'auto-pause)
