@@ -43,7 +43,9 @@
                                     (lambda ()
                                       (auto-pause-resume-process proc))
                                     delay-seconds)))
-    (add-function :after (process-sentinel proc) abort-function)) 
+    (add-function :after (process-sentinel proc) (lambda (proc event)
+                                                   (when (eq 'exit (process-status proc))
+                                                     (funcall abort-function)))))
   proc)
 
 (defmacro with-auto-pause (delay-seconds &rest body)
