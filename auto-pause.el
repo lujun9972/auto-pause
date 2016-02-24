@@ -48,14 +48,14 @@
 (defmacro with-auto-pause (delay-seconds &rest body)
   "Evalute BODY, if BODY created an asynchronous subprocess, it will be auto-pause-process"
   (declare (debug t) (indent 1))
-  `(let ((advise-name  "start-process-auto-pause-advise"))
-     (advice-add start-process
+  `(progn
+     (advice-add 'start-process
                  :filter-return
                  (lambda (proc)
-                   (auto-pause-mark-process proc delay-seconds))
-                 :name advise-name)
+                   (auto-pause-mark-process proc ,delay-seconds)))
      (unwind-protect (progn ,@body)
-       (advice-remove start-process advise-name))))
+       (advice-remove 'start-process (lambda (proc)
+                                       (auto-pause-mark-process proc ,delay-seconds))))))
 
 ;; (defun auto-pause-make-pause-and-resume-functions (pause-fn resume-fn)
 ;;   (let (pause-function resume-function)
