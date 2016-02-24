@@ -2,7 +2,7 @@
 (require 'cl-lib)
 
 (defmacro auto-pause (pause-fn resume-fn delay-seconds)
-  (declare '((debug t) (indent defun)))
+  (declare (debug t) (indent defun))
   (let ( ;; (pause-fn (function pause-fn))
         ;; (resume-fn (function resume-fn))
         (pause-function-name (cl-gensym "auto-pause-pause-"))
