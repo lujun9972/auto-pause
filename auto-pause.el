@@ -38,15 +38,20 @@
 
 (defun auto-pause-mark-process (proc delay-seconds)
   "Pause the PROC the next time Emacs is idle for DELAY-SECONDS, and resume the PROC when emacs become busy again"
-  (let ((abort-function (auto-pause (lambda ()
-                                      (auto-pause-pause-process proc))
-                                    (lambda ()
-                                      (auto-pause-resume-process proc))
-                                    delay-seconds)))
-    (add-function :after (process-sentinel proc) (lambda (proc event)
-                                                   (when (eq 'exit (process-status proc))
-                                                     (funcall abort-function)))))
+  (process-put proc 'auto-pause-abort-function
+               (auto-pause (lambda ()
+                             (auto-pause-pause-process proc))
+                           (lambda ()
+                             (auto-pause-resume-process proc))
+                           delay-seconds))
+  (add-function :after (process-sentinel proc) (lambda (proc event)
+                                                 (when (eq 'exit (process-status proc))
+                                                   (when (process-get proc 'auto-pause-abort-function)
+                                                     (funcall (process-get proc 'auto-pause-abort-function))))))
   proc)
+
+(defun auto-pause-process-p (proc)
+  (process-get proc 'auto-pause-abort-function))
 
 (defmacro with-auto-pause (delay-seconds &rest body)
   "Evalute BODY, if BODY created an asynchronous subprocess, it will be auto-pause-process"
@@ -56,6 +61,15 @@
                  :filter-return
                  (lambda (proc)
                    (auto-pause-mark-process proc ,delay-seconds)))
+     (advice-add 'set-process-sentinel
+                 :filter-args
+                 (lambda (proc sentinel)
+                   (if (not (auto-pause-process-p proc))
+                       (list proc sentinel)
+                     (list proc (lambda (proc event)
+                                  (funcall sentinel proc event)
+                                  (when (eq 'exit (process-status proc))
+                                    (funcall (process-get proc 'auto-pause-abort-function))))))))
      (unwind-protect (progn ,@body)
        (advice-remove 'start-process (lambda (proc)
                                        (auto-pause-mark-process proc ,delay-seconds))))))
