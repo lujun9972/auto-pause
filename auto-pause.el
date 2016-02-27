@@ -40,11 +40,12 @@
 
 (defun auto-pause--set-process-sentinel (proc sentinel)
   "Give PROC the sentinel SENTINEL, PROC should be an auto-pause process"
-  (when (auto-pause-process-p proc)
-    (process-sentinel proc (lambda (proc event)
-                             (funcall sentinel proc event)
-                             (when (eq 'exit (process-status proc))
-                               (funcall (process-get proc 'auto-pause-abort-function)))))))
+  (when (and (auto-pause-process-p proc)
+             (ad-is-active 'set-process-sentinel))
+    (set-process-sentinel proc (lambda (proc event)
+                                 (funcall sentinel proc event)
+                                 (when (eq 'exit (process-status proc))
+                                   (funcall (process-get proc 'auto-pause-abort-function)))))))
 
 (defun auto-pause--reset-process-sentinel (proc)
   "Reset the sentinel function of PROC which should be an auto-pause function"
@@ -55,9 +56,9 @@
   (process-put proc 'auto-pause-abort-function
                (auto-pause (lambda ()
                              (auto-pause-pause-process proc))
-                           (lambda ()
-                             (auto-pause-resume-process proc))
-                           delay-seconds))
+                 (lambda ()
+                   (auto-pause-resume-process proc))
+                 delay-seconds))
   (auto-pause--reset-process-sentinel proc)
   proc)
 
