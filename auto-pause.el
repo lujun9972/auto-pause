@@ -1,4 +1,43 @@
-;; -*- lexical-binding: t; -*-
+;;; auto-pause.el --- library for creating auto-pause process which will be paused when Emacs idle for specific time and be resumed when emacs become busy again  -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
+
+;; Author: DarkSun <lujun9972@gmail.com>
+;; Created: 2016-01-03
+;; Version: 0.1
+;; Keywords: convenience, menu
+;; Package-Requires: ((cl-lib "0.5"))
+;; URL: https://github.com/lujun9972/auto-pause
+
+;; This file is NOT part of GNU Emacs.
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;; You should have received a copy of the GNU General Public License
+;; along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+;;; Source code
+;;
+;; auto-pause's code can be found here:
+;;   http://github.com/lujun9972/auto-pause
+
+;;; Commentary:
+ 
+;; auto-pause is a llibrary for creating auto-pause process which will be paused when Emacs idle for specific time and be resumed when emacs become busy again 
+
+;; Quick start:
+
+;; see the doc-string of `with-auto-pause'
+
+;;; Code:
 (require 'cl-lib)
 
 (defmacro auto-pause (pause-fn resume-fn delay-seconds)
@@ -63,7 +102,7 @@
   proc)
 
 (defmacro with-auto-pause (delay-seconds &rest body)
-  "Evalute BODY, if BODY created an asynchronous subprocess, it will be auto-pause-process"
+  "Evalute BODY, if BODY created an asynchronous subprocess, it will be an auto-pause-process"
   (declare (debug t) (indent 1))
   `(progn
      (advice-add 'start-process
@@ -79,16 +118,5 @@
                                        (auto-pause-mark-process proc ,delay-seconds)))
        (advice-remove 'set-process-sentinel (lambda (proc sentinel)
                                               (auto-pause--reset-process-sentinel proc))))))
-
-;; (defun auto-pause-make-pause-and-resume-functions (pause-fn resume-fn)
-;;   (let (pause-function resume-function)
-;;     (setq pause-function (lambda ()
-;;                            (apply pause-fn)
-;;                            (add-hook 'post-command-hook resume-function)))
-;;     (setq resume-function (lambda (delay-seconds)
-;;                             (apply resume-fn)
-;;                             (remove-hook 'post-command-hook resume-function)
-;;                             (run-with-idle-timer delay-seconds nil pause-function)))
-;;     (list pause-function resume-function)))
 
 (provide 'auto-pause)
