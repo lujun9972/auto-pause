@@ -120,3 +120,5 @@
                                               (auto-pause--reset-process-sentinel proc))))))
 
 (provide 'auto-pause)
+
+;;; auto-pause.el ends here
