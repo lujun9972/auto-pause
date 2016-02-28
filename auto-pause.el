@@ -126,5 +126,4 @@
        (advice-remove 'set-process-sentinel  "auto-pause-advise-set-process-sentinel"))))
 
 (provide 'auto-pause)
-
 ;;; auto-pause.el ends here
