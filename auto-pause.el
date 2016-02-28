@@ -6,7 +6,7 @@
 ;; Created: 2016-02-23
 ;; Version: 0.1
 ;; Keywords: convenience, menu
-;; Package-Requires: ((cl-lib "0.5"))
+;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/lujun9972/auto-pause
 
 ;; This file is NOT part of GNU Emacs.
