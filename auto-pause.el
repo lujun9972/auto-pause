@@ -1,4 +1,4 @@
-;;; auto-pause.el --- library for creating auto-pause process which will be paused when Emacs idle for specific time and be resumed when emacs become busy again  -*- lexical-binding: t; -*-
+;;; auto-pause.el --- Run processes which will be paused when Emacs is idle  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2004-2015 Free Software Foundation, Inc.
 
@@ -31,7 +31,9 @@
 
 ;;; Commentary:
  
-;; auto-pause is a llibrary for creating auto-pause process which will be paused when Emacs idle for specific time and be resumed when emacs become busy again 
+;; auto-pause is a llibrary for creating auto-pause process which will
+;; be paused when Emacs idle for specific time and be resumed when emacs
+;; becomes busy again 
 
 ;; Quick start:
 
