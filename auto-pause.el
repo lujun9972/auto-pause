@@ -1,4 +1,4 @@
-;;; auto-pause.el --- library for creating auto-pause process which will be paused when Emacs idle for specific time and be resumed when emacs become busy again  -*- lexical-binding: t; -*-
+;;; auto-pause.el --- Run processes which will be paused when Emacs is idle  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2004-2015 DarkSun <lujun9972@gmail.com>
 
@@ -6,7 +6,7 @@
 ;; Created: 2016-02-23
 ;; Version: 0.1
 ;; Keywords: convenience, menu
-;; Package-Requires: ((cl-lib "0.5"))
+;; Package-Requires: ((emacs "24.4"))
 ;; URL: https://github.com/lujun9972/auto-pause
 
 ;; This file is NOT part of GNU Emacs.
@@ -31,7 +31,9 @@
 
 ;;; Commentary:
  
-;; auto-pause is a llibrary for creating auto-pause process which will be paused when Emacs idle for specific time and be resumed when emacs become busy again 
+;; auto-pause is a llibrary for creating auto-pause process which will
+;; be paused when Emacs idle for specific time and be resumed when emacs
+;; becomes busy again 
 
 ;; Quick start:
 
@@ -40,27 +42,26 @@
 ;;; Code:
 (require 'cl-lib)
 
-(defmacro auto-pause (pause-fn resume-fn delay-seconds)
-  (declare (debug t) (indent defun))
-  (let ((pause-function-name (cl-gensym "auto-pause-pause-"))
-        (resume-function-name (cl-gensym "auto-pause-resume-"))
-        (abort-function-name (cl-gensym "auto-pause-abort-"))
-        (idle-timer (cl-gensym "auto-pause-idle-timer-"))
-        (delay-seconds delay-seconds))
-    `(progn
-       (defun ,pause-function-name ()
-         (funcall ,pause-fn )
-         (add-hook 'post-command-hook #',resume-function-name))
-       (defun ,resume-function-name ()
-         (funcall ,resume-fn )
-         (remove-hook 'post-command-hook #',resume-function-name)) 
-       (setq ,idle-timer (run-with-idle-timer ,delay-seconds t #',pause-function-name))
-       (defun ,abort-function-name ()
-         (cancel-timer ,idle-timer)
-         (unintern ',idle-timer nil)
-         (unintern ',pause-function-name nil)
-         (unintern ',resume-function-name nil)
-         (unintern ',abort-function-name nil)))))
+(defun auto-pause (pause-fn resume-fn delay-seconds)
+    (let ((pause-function-name (cl-gensym "auto-pause-pause-"))
+          (resume-function-name (cl-gensym "auto-pause-resume-"))
+          (abort-function-name (cl-gensym "auto-pause-abort-"))
+          (idle-timer (cl-gensym "auto-pause-idle-timer-")))
+      (message "expand %s %s %s %s" pause-function-name resume-function-name abort-function-name idle-timer)
+      (fset pause-function-name (lambda ()
+                                  (funcall pause-fn )
+                                  (add-hook 'post-command-hook resume-function-name)))
+      (fset resume-function-name (lambda ()
+                                   (funcall resume-fn )
+                                   (remove-hook 'post-command-hook resume-function-name))) 
+      (set idle-timer (run-with-idle-timer delay-seconds t pause-function-name))
+      (fset abort-function-name (lambda ()
+                                  (message "abort %s" abort-function-name)
+                                  (cancel-timer (symbol-value idle-timer))
+                                  ;; (unintern idle-timer nil)
+                                  (fmakunbound pause-function-name)
+                                  (fmakunbound resume-function-name )
+                                  (fmakunbound abort-function-name )))))
 
 (defun auto-pause-pause-process (proc)
   "Pause PROC by send SIGSTOP signal. PROC should be subprocess of emacs"
@@ -77,14 +78,17 @@
   (and (processp proc)
        (process-get proc 'auto-pause-abort-function)))
 
+(defun auto-pause--make-auto-pause-sentinel (sentinel)
+  (lambda (proc event)
+    (unwind-protect 
+        (funcall sentinel proc event)
+      (when (eq 'exit (process-status proc))
+        (funcall (process-get proc 'auto-pause-abort-function))))))
+
 (defun auto-pause--set-process-sentinel (proc sentinel)
   "Give PROC the sentinel SENTINEL, PROC should be an auto-pause process"
-  (when (and (auto-pause-process-p proc)
-             (ad-is-active 'set-process-sentinel))
-    (set-process-sentinel proc (lambda (proc event)
-                                 (funcall sentinel proc event)
-                                 (when (eq 'exit (process-status proc))
-                                   (funcall (process-get proc 'auto-pause-abort-function)))))))
+  (when (auto-pause-process-p proc)
+    (set-process-sentinel proc (auto-pause--make-auto-pause-sentinel sentinel))))
 
 (defun auto-pause--reset-process-sentinel (proc)
   "Reset the sentinel function of PROC which should be an auto-pause function"
@@ -108,15 +112,20 @@
      (advice-add 'start-process
                  :filter-return
                  (lambda (proc)
-                   (auto-pause-mark-process proc ,delay-seconds)))
+                   (auto-pause-mark-process proc ,delay-seconds))
+                 '((name "auto-pause-advise-start-process")))
      (advice-add 'set-process-sentinel
-                 :after
-                 (lambda (proc sentinel)
-                   (auto-pause--reset-process-sentinel proc)))
+                 :filter-args
+                 (lambda (args)
+                   (let ((proc (car args))
+                         (sentinel (cadr args)))
+                     (if (auto-pause-process-p proc)
+                         (list proc (auto-pause--make-auto-pause-sentinel sentinel))
+                       (list proc sentinel))))
+                 '((name "auto-pause-advise-set-process-sentinel")))
      (unwind-protect (progn ,@body)
-       (advice-remove 'start-process (lambda (proc)
-                                       (auto-pause-mark-process proc ,delay-seconds)))
-       (advice-remove 'set-process-sentinel (lambda (proc sentinel)
-                                              (auto-pause--reset-process-sentinel proc))))))
+       (advice-remove 'start-process  "auto-pause-advise-start-process")
+       (advice-remove 'set-process-sentinel  "auto-pause-advise-set-process-sentinel"))))
 
 (provide 'auto-pause)
+;;; auto-pause.el ends here
